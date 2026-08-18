@@ -1,0 +1,35 @@
+.loadingContainer {
+  width: 100%;
+}
+
+.loadingContainer.fullHeight {
+  min-height: 100vh;
+}
+
+.skeletonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonLine {
+  height: 16px;
+  background: linear-gradient(
+    90deg,
+    var(--bgColor-muted) 0%,
+    var(--bgColor-emphasis) 50%,
+    var(--bgColor-muted) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

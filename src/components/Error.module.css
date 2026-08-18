@@ -1,0 +1,28 @@
+.errorAlert {
+  border-radius: 6px;
+  margin-bottom: 16px;
+  animation: slideIn 0.3s ease-out;
+}
+
+.errorContainer {
+  width: 100%;
+  min-height: 400px;
+  background: var(--bgColor-default);
+  border-radius: 8px;
+  border: 1px solid var(--borderColor-muted);
+}
+
+.errorIcon {
+  color: var(--fgColor-danger);
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

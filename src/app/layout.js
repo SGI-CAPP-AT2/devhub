@@ -4,6 +4,7 @@ import "@primer/primitives/dist/css/functional/themes/light.css";
 import "@primer/primitives/dist/css/functional/themes/dark.css";
 
 import { BaseStyles, ThemeProvider } from "@primer/react";
+import { ClientProviders } from "./providers";
 
 export const metadata = {
   title: "DevHub",
@@ -21,7 +22,9 @@ export default function RootLayout({ children }) {
           preventSSRMismatch
         >
           <BaseStyles>
-            <div className="app">{children}</div>
+            <ClientProviders>
+              <div className="app">{children}</div>
+            </ClientProviders>
           </BaseStyles>
         </ThemeProvider>
       </body>
