@@ -1,12 +1,37 @@
 "use client";
 
-import { GearIcon, SignOutIcon } from "@primer/octicons-react";
-import { ActionList, ActionMenu, Header, Text } from "@primer/react";
+import { GearIcon, SignOutIcon, ThreeBarsIcon } from "@primer/octicons-react";
+import {
+  ActionList,
+  ActionMenu,
+  Header,
+  Text,
+  IconButton,
+} from "@primer/react";
 import Link from "next/link";
 
-export function NavBar() {
+export function NavBar({ onMenuClick }) {
   return (
-    <Header style={{ width: "100%", justifyContent: "space-between" }}>
+    <Header
+      style={{
+        width: "100%",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <Header.Item>
+        <IconButton
+          icon={ThreeBarsIcon}
+          aria-label="Toggle menu"
+          onClick={onMenuClick}
+          variant="invisible"
+          style={{
+            display: "none",
+            color: "inherit",
+          }}
+          className="hamburger-menu"
+        />
+      </Header.Item>
       <Header.Item>
         <Header.Link
           href="/"
@@ -59,3 +84,11 @@ export function NavBar() {
 }
 
 export default NavBar;
+
+const styles = `
+  @media (max-width: 767px) {
+    .hamburger-menu {
+      display: flex !important;
+    }
+  }
+`;

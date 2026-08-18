@@ -7,10 +7,14 @@ import {
   MarkGithubIcon,
   PeopleIcon,
   ProjectIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@primer/octicons-react";
-import { NavList } from "@primer/react";
+import { NavList, IconButton } from "@primer/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import styles from "./SideBar.module.css";
 
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: HomeIcon },
@@ -21,32 +25,80 @@ const NAV_ITEMS = [
   { label: "Settings", href: "/settings", icon: GearIcon },
 ];
 
-export function SideBar() {
+export function SideBar({ onNavigate }) {
   const pathname = usePathname();
+  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if mobile on mount
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  const toggleCollapse = () => {
+    setIsCollapsed(!isCollapsed);
+  };
+
+  const handleNavClick = () => {
+    if (isMobile) {
+      setIsCollapsed(true); // Auto-collapse after navigation on mobile
+    }
+    onNavigate?.();
+  };
 
   return (
-    <NavList aria-label="Main Navigation">
-      {NAV_ITEMS.map((item) => {
-        const IconComponent = item.icon;
-        const isActive =
-          pathname === item.href ||
-          (item.href !== "/" && pathname?.startsWith(item.href));
+    <div
+      className={`${styles.sidebarWrapper} ${isCollapsed && isMobile ? styles.collapsed : ""}`}
+    >
+      {/* Mobile Hamburger Toggle */}
+      {isMobile && (
+        <div className={styles.mobileHeader}>
+          <IconButton
+            icon={isCollapsed ? ChevronRightIcon : ChevronLeftIcon}
+            aria-label="Toggle sidebar"
+            onClick={toggleCollapse}
+            variant="invisible"
+            className={styles.hamburgerBtn}
+          />
+        </div>
+      )}
 
-        return (
-          <NavList.Item
-            key={item.href}
-            as={Link}
-            href={item.href}
-            aria-current={isActive ? "page" : undefined}
-          >
-            <NavList.LeadingVisual>
-              <IconComponent />
-            </NavList.LeadingVisual>
-            {item.label}
-          </NavList.Item>
-        );
-      })}
-    </NavList>
+      <NavList
+        aria-label="Main Navigation"
+        className={styles.navList}
+        style={{ padding: "8px 0" }}
+      >
+        {NAV_ITEMS.map((item) => {
+          const IconComponent = item.icon;
+          const isActive =
+            pathname === item.href ||
+            (item.href !== "/" && pathname?.startsWith(item.href));
+
+          return (
+            <NavList.Item
+              key={item.href}
+              as={Link}
+              href={item.href}
+              aria-current={isActive ? "page" : undefined}
+              onClick={handleNavClick}
+              className={styles.navItem}
+              title={isCollapsed && isMobile ? item.label : ""}
+            >
+              <NavList.LeadingVisual>
+                <IconComponent />
+              </NavList.LeadingVisual>
+              {!(isCollapsed && isMobile) && item.label}
+            </NavList.Item>
+          );
+        })}
+      </NavList>
+    </div>
   );
 }
 

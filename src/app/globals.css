@@ -4,8 +4,24 @@ body {
   padding: 0;
   min-height: 100%;
 }
+
+:root {
+  --header-height: 56px;
+}
+
 .app {
   min-height: 100vh;
   background: var(--bgColor-default);
   color: var(--fgColor-default);
+}
+
+/* Prevent horizontal scroll on mobile */
+body {
+  overflow-x: hidden;
+}
+
+#__next {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
 }
