@@ -1,37 +1,44 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import {
-  Heading,
-  Text,
-  Button,
-  Label,
-  Spinner,
-  Flash,
-  TextInput,
-} from "@primer/react";
-import {
-  MarkGithubIcon,
-  RepoIcon,
-  StarIcon,
-  RepoForkedIcon,
-  PlusIcon,
   CheckIcon,
   LockIcon,
+  MarkGithubIcon,
+  PeopleIcon,
+  PlusIcon,
+  ProjectIcon,
+  RepoForkedIcon,
+  RepoIcon,
   SearchIcon,
+  StarIcon,
 } from "@primer/octicons-react";
+import {
+  Button,
+  Flash,
+  Heading,
+  Label,
+  Spinner,
+  Text,
+  TextInput,
+} from "@primer/react";
+import { useEffect, useState } from "react";
+import CreateProjectDialog from "@/components/projects/CreateProjectDialog";
 
 export default function Home() {
   const [user, setUser] = useState(null);
+  const [projects, setProjects] = useState([]);
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [addedRepos, setAddedRepos] = useState({});
 
+  // New Project Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   useEffect(() => {
     async function loadDashboardData() {
       try {
-        // Load user session
+        // 1. Load user session
         const sessionRes = await fetch("/api/auth/session");
         if (sessionRes.ok) {
           const sessionData = await sessionRes.json();
@@ -45,7 +52,14 @@ export default function Home() {
           return;
         }
 
-        // Load GitHub Repositories
+        // 2. Load Associated Projects
+        const projectsRes = await fetch("/api/projects");
+        if (projectsRes.ok) {
+          const projectsData = await projectsRes.json();
+          setProjects(projectsData.projects || []);
+        }
+
+        // 3. Load GitHub Repositories
         const reposRes = await fetch("/api/github/repos");
         if (reposRes.ok) {
           const reposData = await reposRes.json();
@@ -72,8 +86,7 @@ export default function Home() {
   const filteredRepos = repos.filter(
     (repo) =>
       repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (repo.description &&
-        repo.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      repo.description?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -95,23 +108,224 @@ export default function Home() {
           <Heading as="h1" style={{ fontSize: "28px", marginBottom: "4px" }}>
             Welcome back, {user?.name || user?.username || "Developer"} 👋
           </Heading>
-          <Text as="p" style={{ color: "var(--fgColor-muted)", fontSize: "14px", margin: 0 }}>
-            Manage your connected GitHub repositories and DevHub projects
+          <Text
+            as="p"
+            style={{
+              color: "var(--fgColor-muted)",
+              fontSize: "14px",
+              margin: 0,
+            }}
+          >
+            Manage your associated projects and connected GitHub repositories
           </Text>
         </div>
 
-        {user?.githubAuthorized && (
-          <Label
-            variant="success"
-            size="large"
-            style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          {user?.githubAuthorized && (
+            <Label
+              variant="success"
+              size="large"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              <MarkGithubIcon size={16} /> GitHub Authorized
+            </Label>
+          )}
+
+          <Button
+            variant="primary"
+            leadingVisual={PlusIcon}
+            onClick={() => setShowCreateModal(true)}
           >
-            <MarkGithubIcon size={16} /> GitHub Authorized
-          </Label>
+            New Project
+          </Button>
+        </div>
+      </div>
+
+      {/* Projects Section */}
+      <div style={{ marginBottom: "40px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "20px",
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <Heading as="h2" style={{ fontSize: "20px", margin: 0 }}>
+              Your Projects
+            </Heading>
+            <Label style={{ borderRadius: "20px" }}>{projects.length}</Label>
+          </div>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: "20px 0" }}>
+            <Spinner size="medium" />
+          </div>
+        ) : projects.length === 0 ? (
+          <div
+            style={{
+              padding: "32px",
+              textAlign: "center",
+              border: "1px dashed var(--borderColor-default)",
+              borderRadius: "8px",
+              backgroundColor: "var(--bgColor-inset)",
+            }}
+          >
+            <ProjectIcon
+              size={32}
+              style={{ color: "var(--fgColor-muted)", marginBottom: "12px" }}
+            />
+            <Heading as="h3" style={{ fontSize: "16px", marginBottom: "8px" }}>
+              No projects associated yet
+            </Heading>
+            <Text
+              as="p"
+              style={{
+                color: "var(--fgColor-muted)",
+                fontSize: "14px",
+                marginBottom: "16px",
+              }}
+            >
+              Create a new project to start collaborating with your team and
+              linking GitHub repositories.
+            </Text>
+            <Button
+              variant="primary"
+              leadingVisual={PlusIcon}
+              onClick={() => setShowCreateModal(true)}
+            >
+              Create First Project
+            </Button>
+          </div>
+        ) : (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+              gap: "16px",
+            }}
+          >
+            {projects.map((project) => (
+              <div
+                key={project.id}
+                style={{
+                  padding: "20px",
+                  borderRadius: "8px",
+                  border: "1px solid var(--borderColor-default)",
+                  backgroundColor: "var(--bgColor-default)",
+                  display: "flex",
+                  flexDirection: "column",
+                  justifyContent: "space-between",
+                  transition: "all 0.2s ease-in-out",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <ProjectIcon
+                        size={18}
+                        style={{ color: "var(--fgColor-accent)" }}
+                      />
+                      <Text style={{ fontWeight: "bold", fontSize: "16px" }}>
+                        {project.name}
+                      </Text>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <Label
+                        size="small"
+                        variant={
+                          project.userRole === "OWNER"
+                            ? "accent"
+                            : project.userRole === "ADMIN"
+                              ? "attention"
+                              : "secondary"
+                        }
+                      >
+                        {project.userRole}
+                      </Label>
+                    </div>
+                  </div>
+
+                  <Text
+                    as="p"
+                    style={{
+                      color: "var(--fgColor-muted)",
+                      fontSize: "14px",
+                      marginBottom: "16px",
+                      minHeight: "38px",
+                      lineHeight: 1.4,
+                    }}
+                  >
+                    {project.description || "No project description."}
+                  </Text>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    paddingTop: "12px",
+                    borderTop: "1px solid var(--borderColor-default)",
+                    fontSize: "12px",
+                    color: "var(--fgColor-muted)",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <PeopleIcon size={14} />
+                    <span>
+                      {project.memberCount} member
+                      {project.memberCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
+                    <RepoIcon size={14} />
+                    <span>
+                      {project.repoCount} repo
+                      {project.repoCount !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
 
-      {/* Repositories Section */}
+      {/* GitHub Repositories Section */}
       <div style={{ marginBottom: "24px" }}>
         <div
           style={{
@@ -156,7 +370,10 @@ export default function Home() {
             </Text>
           </div>
         ) : filteredRepos.length === 0 ? (
-          <Flash variant="default" style={{ textAlign: "center", padding: "32px" }}>
+          <Flash
+            variant="default"
+            style={{ textAlign: "center", padding: "32px" }}
+          >
             <Text>No repositories found matching "{searchQuery}".</Text>
           </Flash>
         ) : (
@@ -206,7 +423,10 @@ export default function Home() {
                       >
                         <RepoIcon
                           size={18}
-                          style={{ color: "var(--fgColor-muted)", flexShrink: 0 }}
+                          style={{
+                            color: "var(--fgColor-muted)",
+                            flexShrink: 0,
+                          }}
                         />
                         <Text
                           as="a"
@@ -281,7 +501,13 @@ export default function Home() {
                       }}
                     >
                       {repo.language && (
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                          }}
+                        >
                           <span
                             style={{
                               width: "10px",
@@ -295,12 +521,24 @@ export default function Home() {
                         </div>
                       )}
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
                         <StarIcon size={14} />
                         <span>{repo.stargazers_count}</span>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
+                      >
                         <RepoForkedIcon size={14} />
                         <span>{repo.forks_count}</span>
                       </div>
@@ -322,6 +560,16 @@ export default function Home() {
           </div>
         )}
       </div>
+
+      {showCreateModal && (
+        <CreateProjectDialog
+          isOpen={showCreateModal}
+          onDismiss={() => setShowCreateModal(false)}
+          onCreated={(project) =>
+            setProjects((currentProjects) => [project, ...currentProjects])
+          }
+        />
+      )}
     </div>
   );
 }
