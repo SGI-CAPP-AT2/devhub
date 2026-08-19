@@ -1,0 +1,128 @@
+.signupFormContainer {
+  width: 100%;
+  max-width: 100%;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.progressContainer {
+  width: 100%;
+  height: 4px;
+  background-color: var(--bgColor-muted);
+  border-radius: 2px;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+
+.progressBar {
+  height: 100%;
+  background-color: var(--fgColor-accent);
+  transition: width 0.3s ease-out;
+  border-radius: 2px;
+}
+
+.stepIndicator {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.stepDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: var(--bgColor-muted);
+  transition: all 0.3s ease-out;
+  cursor: pointer;
+}
+
+.stepDot.active {
+  width: 24px;
+  border-radius: 5px;
+  background-color: var(--fgColor-accent);
+}
+
+.stepDot.completed {
+  background-color: var(--fgColor-success);
+}
+
+.stepTitle {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  text-align: center;
+  color: var(--fgColor-default);
+}
+
+.stepContent {
+  margin-bottom: 16px;
+  min-height: auto;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.navigation {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+
+.navigation button {
+  flex: 1;
+}
+
+.errorMessage {
+  padding: 10px 12px;
+  margin-top: 12px;
+  background-color: var(--bgColor-danger);
+  color: var(--fgColor-onEmphasis);
+  border-radius: 6px;
+  font-size: 13px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .signupFormContainer {
+    padding: 0;
+  }
+
+  .stepTitle {
+    font-size: 15px;
+  }
+
+  .stepContent {
+    min-height: auto;
+  }
+
+  .navigation {
+    flex-direction: row;
+  }
+
+  .navigation button {
+    width: auto;
+  }
+}

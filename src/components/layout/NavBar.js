@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { GearIcon, SignOutIcon, ThreeBarsIcon } from "@primer/octicons-react";
 import {
   ActionList,
@@ -7,10 +8,38 @@ import {
   Header,
   Text,
   IconButton,
+  Avatar,
 } from "@primer/react";
 import Link from "next/link";
 
 export function NavBar({ onMenuClick }) {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    async function loadUser() {
+      try {
+        const res = await fetch("/api/auth/session");
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data.user);
+        }
+      } catch (err) {
+        console.error("Failed to load user session in NavBar:", err);
+      }
+    }
+    loadUser();
+  }, []);
+
+  const handleSignOut = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch (err) {
+      console.error("Logout error:", err);
+    } finally {
+      window.location.href = "/signup";
+    }
+  };
+
   return (
     <Header
       style={{
@@ -55,8 +84,11 @@ export function NavBar({ onMenuClick }) {
             style={{ color: "inherit", padding: "4px 8px" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              {user?.image ? (
+                <Avatar src={user.image} size={24} alt={user.username} />
+              ) : null}
               <Text fontSize={2} fontWeight="bold" color="fg.onEmphasis">
-                User
+                {user?.name || user?.username || "User"}
               </Text>
             </div>
           </ActionMenu.Button>
@@ -69,7 +101,7 @@ export function NavBar({ onMenuClick }) {
                 Settings
               </ActionList.LinkItem>
               <ActionList.Divider />
-              <ActionList.Item variant="danger">
+              <ActionList.Item variant="danger" onSelect={handleSignOut}>
                 <ActionList.LeadingVisual>
                   <SignOutIcon />
                 </ActionList.LeadingVisual>
@@ -84,11 +116,3 @@ export function NavBar({ onMenuClick }) {
 }
 
 export default NavBar;
-
-const styles = `
-  @media (max-width: 767px) {
-    .hamburger-menu {
-      display: flex !important;
-    }
-  }
-`;
