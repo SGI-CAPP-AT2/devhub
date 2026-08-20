@@ -39,7 +39,15 @@ export async function GET() {
               },
             },
             repositories: {
-              select: { id: true },
+              select: {
+                id: true,
+                name: true,
+                fullName: true,
+                description: true,
+                url: true,
+                defaultBranch: true,
+                isPrivate: true,
+              },
             },
           },
         },
@@ -63,6 +71,7 @@ export async function GET() {
         role: m.role,
       })),
       repoCount: membership.project.repositories.length,
+      repositories: membership.project.repositories,
       createdAt: membership.project.createdAt,
     }));
 

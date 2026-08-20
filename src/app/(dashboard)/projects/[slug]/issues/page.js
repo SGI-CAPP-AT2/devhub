@@ -125,29 +125,7 @@ export default function IssuesPage() {
   }
 
   return (
-    <div
-      style={{
-        maxWidth: "1200px",
-        margin: "0 auto",
-        padding: "32px",
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          marginBottom: "32px",
-        }}
-      >
-        <Heading as="h1" sx={{ mb: 2 }}>
-          Issues
-        </Heading>
-
-        <Text as="p" sx={{ color: "fg.muted", m: 0 }}>
-          Track and manage issues across your projects.
-        </Text>
-      </div>
-
-      {/* Status Filters */}
+    <div>
       <div
         style={{
           display: "flex",
@@ -159,6 +137,7 @@ export default function IssuesPage() {
         <Button
           variant={status === "open" ? "primary" : "default"}
           onClick={() => changeStatus("open")}
+          disabled={loading}
         >
           Open
         </Button>
@@ -166,6 +145,7 @@ export default function IssuesPage() {
         <Button
           variant={status === "closed" ? "primary" : "default"}
           onClick={() => changeStatus("closed")}
+          disabled={loading}
         >
           Closed
         </Button>
@@ -173,6 +153,7 @@ export default function IssuesPage() {
         <Button
           variant={status === "all" ? "primary" : "default"}
           onClick={() => changeStatus("all")}
+          disabled={loading}
         >
           All
         </Button>

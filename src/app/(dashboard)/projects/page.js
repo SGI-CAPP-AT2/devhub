@@ -15,6 +15,7 @@ import {
   Spinner,
   Text,
 } from "@primer/react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import CreateProjectDialog from "@/components/projects/CreateProjectDialog";
 
@@ -43,7 +44,7 @@ export default function ProjectsPage() {
   }, []);
 
   return (
-    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
+    <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "16px" }}>
       <header
         style={{
           marginBottom: "32px",
@@ -220,15 +221,18 @@ function ProjectCard({ project }) {
               size={18}
               style={{ color: "var(--fgColor-accent)", flexShrink: 0 }}
             />
-            <Text
+            <Link
+              href={`/projects/${encodeURIComponent(project.slug)}`}
               style={{
+                color: "var(--fgColor-default)",
                 fontWeight: "bold",
                 fontSize: "16px",
                 overflowWrap: "anywhere",
+                textDecoration: "none",
               }}
             >
               {project.name}
-            </Text>
+            </Link>
           </div>
           <Label
             size="small"
