@@ -1,8 +1,20 @@
 "use client";
 
-import { Heading, Text, Label, Avatar, Link, Button } from "@primer/react";
-import { IssueOpenedIcon } from "@primer/octicons-react";
-import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { IssueOpenedIcon, ProjectIcon } from "@primer/octicons-react";
+import {
+  Avatar,
+  Button,
+  Checkbox,
+  Dialog,
+  Flash,
+  Heading,
+  Label,
+  Link,
+  Select,
+  Spinner,
+  Text,
+} from "@primer/react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 const LIMIT = 20;
@@ -39,6 +51,19 @@ export default function IssuesPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMsg, setSuccessMsg] = useState("");
+
+  // Issue selection for adding to board
+  const [selectedIssues, setSelectedIssues] = useState([]);
+
+  // Add to Board Dialog state
+  const [isAddToBoardOpen, setIsAddToBoardOpen] = useState(false);
+  const [boards, setBoards] = useState([]);
+  const [loadingBoards, setLoadingBoards] = useState(false);
+  const [targetBoardId, setTargetBoardId] = useState("");
+  const [targetSectionId, setTargetSectionId] = useState("");
+  const [addingToBoard, setAddingToBoard] = useState(false);
+  const [addToBoardError, setAddToBoardError] = useState("");
 
   useEffect(() => {
     if (!slug) return;
@@ -76,6 +101,8 @@ export default function IssuesPage() {
         const data = await response.json();
 
         setIssues(data.issues || []);
+        // Reset selection on page change or filter change
+        setSelectedIssues([]);
 
         setPagination(
           data.pagination || {
@@ -124,57 +151,209 @@ export default function IssuesPage() {
     router.push(`/projects/${slug}/issues?${params.toString()}`);
   }
 
+  // Toggle selection for a single issue
+  const toggleIssueSelection = (issue) => {
+    setSelectedIssues((prev) => {
+      const exists = prev.some((i) => i.id === issue.id);
+      if (exists) {
+        return prev.filter((i) => i.id !== issue.id);
+      }
+      return [...prev, issue];
+    });
+  };
+
+  // Toggle select all on current page
+  const toggleSelectAll = () => {
+    if (selectedIssues.length === issues.length && issues.length > 0) {
+      setSelectedIssues([]);
+    } else {
+      setSelectedIssues([...issues]);
+    }
+  };
+
+  // Open Add to Board dialog and fetch available boards
+  const handleOpenAddToBoard = async () => {
+    setIsAddToBoardOpen(true);
+    setAddToBoardError("");
+    setLoadingBoards(true);
+
+    try {
+      const response = await fetch(`/api/projects/${slug}/boards`);
+      if (!response.ok) {
+        throw new Error("Failed to load boards.");
+      }
+      const data = await response.json();
+      const boardList = data.boards || [];
+      setBoards(boardList);
+
+      if (boardList.length > 0) {
+        setTargetBoardId(boardList[0].id);
+        const sections = boardList[0].sections || [];
+        setTargetSectionId(sections.length > 0 ? sections[0].id : "");
+      } else {
+        setTargetBoardId("");
+        setTargetSectionId("");
+      }
+    } catch (err) {
+      console.error("Error loading boards:", err);
+      setAddToBoardError("Failed to fetch project boards.");
+    } finally {
+      setLoadingBoards(false);
+    }
+  };
+
+  // When selected board changes in dialog, update target section
+  const handleBoardChange = (boardId) => {
+    setTargetBoardId(boardId);
+    const board = boards.find((b) => b.id === boardId);
+    const sections = board?.sections || [];
+    setTargetSectionId(sections.length > 0 ? sections[0].id : "");
+  };
+
+  // Submit adding issues to board
+  const handleSubmitAddToBoard = async (e) => {
+    e.preventDefault();
+    if (!targetSectionId || selectedIssues.length === 0) return;
+
+    try {
+      setAddingToBoard(true);
+      setAddToBoardError("");
+
+      const response = await fetch(`/api/projects/${slug}/issues`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sectionId: targetSectionId,
+          issues: selectedIssues.map((issue) => ({
+            title: `#${issue.number} ${issue.title}`,
+            description: issue.body || null,
+          })),
+        }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to add issues to board.");
+      }
+
+      setIsAddToBoardOpen(false);
+      setSelectedIssues([]);
+      setSuccessMsg(
+        `Successfully added ${selectedIssues.length} issue(s) to the board!`,
+      );
+      setTimeout(() => setSuccessMsg(""), 5000);
+    } catch (err) {
+      console.error("Add to board error:", err);
+      setAddToBoardError(err.message || "Failed to add issues to board.");
+    } finally {
+      setAddingToBoard(false);
+    }
+  };
+
+  const selectedBoard = boards.find((b) => b.id === targetBoardId);
+  const targetSections = selectedBoard?.sections || [];
+  const allSelected =
+    issues.length > 0 && selectedIssues.length === issues.length;
+
   return (
     <div>
+      {/* Alert Notifications */}
+      {error && (
+        <Flash
+          variant="danger"
+          style={{
+            marginBottom: "16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>{error}</span>
+          <Button size="small" variant="invisible" onClick={() => setError("")}>
+            Dismiss
+          </Button>
+        </Flash>
+      )}
+
+      {successMsg && (
+        <Flash
+          variant="success"
+          style={{
+            marginBottom: "16px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <span>{successMsg}</span>
+          <Button
+            size="small"
+            variant="invisible"
+            onClick={() => setSuccessMsg("")}
+          >
+            Dismiss
+          </Button>
+        </Flash>
+      )}
+
+      {/* Top Filter and Action Bar */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: "8px",
-          marginBottom: "24px",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "20px",
         }}
       >
-        <Button
-          variant={status === "open" ? "primary" : "default"}
-          onClick={() => changeStatus("open")}
-          disabled={loading}
-        >
-          Open
-        </Button>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Button
+            variant={status === "open" ? "primary" : "default"}
+            onClick={() => changeStatus("open")}
+            disabled={loading}
+          >
+            Open
+          </Button>
 
-        <Button
-          variant={status === "closed" ? "primary" : "default"}
-          onClick={() => changeStatus("closed")}
-          disabled={loading}
-        >
-          Closed
-        </Button>
+          <Button
+            variant={status === "closed" ? "primary" : "default"}
+            onClick={() => changeStatus("closed")}
+            disabled={loading}
+          >
+            Closed
+          </Button>
 
-        <Button
-          variant={status === "all" ? "primary" : "default"}
-          onClick={() => changeStatus("all")}
-          disabled={loading}
-        >
-          All
-        </Button>
+          <Button
+            variant={status === "all" ? "primary" : "default"}
+            onClick={() => changeStatus("all")}
+            disabled={loading}
+          >
+            All
+          </Button>
+        </div>
+
+        {/* Add to Board CTA button */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {selectedIssues.length > 0 && (
+            <Text style={{ fontSize: "13px", color: "var(--fgColor-muted)" }}>
+              {selectedIssues.length} selected
+            </Text>
+          )}
+
+          <Button
+            variant="primary"
+            leadingVisual={ProjectIcon}
+            disabled={selectedIssues.length === 0 || loading}
+            onClick={handleOpenAddToBoard}
+          >
+            Add to Board
+            {selectedIssues.length > 0 ? ` (${selectedIssues.length})` : ""}
+          </Button>
+        </div>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div
-          style={{
-            padding: "16px",
-            marginBottom: "24px",
-            border: "1px solid var(--borderColor-danger-muted)",
-            borderRadius: "6px",
-            color: "var(--fgColor-danger)",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Issues */}
+      {/* Issues Container with Header and Rows */}
       <div
         style={{
           border: "1px solid var(--borderColor-default)",
@@ -182,6 +361,35 @@ export default function IssuesPage() {
           overflow: "hidden",
         }}
       >
+        {/* Table Header with Select All */}
+        {!loading && issues.length > 0 && (
+          <div
+            style={{
+              padding: "10px 16px",
+              backgroundColor: "var(--bgColor-muted, #f6f8fa)",
+              borderBottom: "1px solid var(--borderColor-default)",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px",
+            }}
+          >
+            <Checkbox
+              checked={allSelected}
+              indeterminate={
+                selectedIssues.length > 0 &&
+                selectedIssues.length < issues.length
+              }
+              onChange={toggleSelectAll}
+              aria-label="Select all issues"
+            />
+            <Text style={{ fontSize: "13px", fontWeight: 600 }}>
+              {selectedIssues.length > 0
+                ? `${selectedIssues.length} of ${issues.length} selected`
+                : "Select issues to add to board"}
+            </Text>
+          </div>
+        )}
+
         {loading ? (
           <div
             style={{
@@ -189,7 +397,16 @@ export default function IssuesPage() {
               textAlign: "center",
             }}
           >
-            <Text sx={{ color: "fg.muted" }}>Loading issues...</Text>
+            <Spinner size="medium" />
+            <Text
+              style={{
+                color: "var(--fgColor-muted)",
+                display: "block",
+                marginTop: "8px",
+              }}
+            >
+              Loading issues...
+            </Text>
           </div>
         ) : issues.length === 0 ? (
           <div
@@ -216,134 +433,156 @@ export default function IssuesPage() {
             </Text>
           </div>
         ) : (
-          issues.map((issue) => (
-            <div
-              key={`${issue.repository.id}-${issue.number}`}
-              style={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "16px",
-                padding: "16px",
-                borderBottom: "1px solid var(--borderColor-muted)",
-              }}
-            >
-              {/* Issue Icon */}
+          issues.map((issue) => {
+            const isSelected = selectedIssues.some((i) => i.id === issue.id);
+
+            return (
               <div
+                key={`${issue.repository.id}-${issue.number}`}
                 style={{
-                  paddingTop: "4px",
-                  flexShrink: 0,
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "12px",
+                  padding: "14px 16px",
+                  borderBottom: "1px solid var(--borderColor-muted)",
+                  backgroundColor: isSelected
+                    ? "var(--bgColor-accent-muted, #e7f2ff)"
+                    : "transparent",
+                  transition: "background-color 0.15s ease",
                 }}
               >
-                <IssueOpenedIcon
-                  size={16}
-                  style={{
-                    color: "var(--fgColor-open)",
-                  }}
-                />
-              </div>
-
-              {/* Issue Content */}
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                {/* Title */}
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    marginBottom: "8px",
-                  }}
-                >
-                  <Link
-                    href={issue.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      fontSize: 2,
-                      fontWeight: "bold",
-                      color: "fg.default",
-                      textDecoration: "none",
-
-                      "&:hover": {
-                        color: "accent.fg",
-                        textDecoration: "underline",
-                      },
-                    }}
-                  >
-                    {issue.title}
-                  </Link>
-
-                  <Text
-                    sx={{
-                      color: "fg.muted",
-                      flexShrink: 0,
-                    }}
-                  >
-                    #{issue.number}
-                  </Text>
+                {/* Row Checkbox */}
+                <div style={{ paddingTop: "2px", flexShrink: 0 }}>
+                  <Checkbox
+                    checked={isSelected}
+                    onChange={() => toggleIssueSelection(issue)}
+                    aria-label={`Select issue ${issue.title}`}
+                  />
                 </div>
 
-                {/* Metadata */}
+                {/* Issue Icon */}
                 <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    flexWrap: "wrap",
+                    paddingTop: "2px",
+                    flexShrink: 0,
                   }}
                 >
-                  {/* Repository */}
-                  <Label variant="secondary">{issue.repository.fullName}</Label>
+                  <IssueOpenedIcon
+                    size={16}
+                    style={{
+                      color:
+                        issue.state === "closed"
+                          ? "var(--fgColor-done, #8250df)"
+                          : "var(--fgColor-open, #1a7f37)",
+                    }}
+                  />
+                </div>
 
-                  {/* Labels */}
-                  {issue.labels?.map((label) => (
-                    <Label key={label.id}>{label.name}</Label>
-                  ))}
-
-                  {/* Date */}
-                  <Text
-                    sx={{
-                      color: "fg.muted",
-                      fontSize: 0,
+                {/* Issue Content */}
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {/* Title */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      marginBottom: "6px",
                     }}
                   >
-                    opened {formatDate(issue.createdAt)}
-                  </Text>
+                    <Link
+                      href={issue.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      sx={{
+                        fontSize: 2,
+                        fontWeight: "bold",
+                        color: "fg.default",
+                        textDecoration: "none",
 
-                  {/* Comments */}
-                  {issue.comments > 0 && (
+                        "&:hover": {
+                          color: "accent.fg",
+                          textDecoration: "underline",
+                        },
+                      }}
+                    >
+                      {issue.title}
+                    </Link>
+
+                    <Text
+                      sx={{
+                        color: "fg.muted",
+                        flexShrink: 0,
+                      }}
+                    >
+                      #{issue.number}
+                    </Text>
+                  </div>
+
+                  {/* Metadata */}
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {/* Repository */}
+                    <Label variant="secondary">
+                      {issue.repository.fullName}
+                    </Label>
+
+                    {/* Labels */}
+                    {issue.labels?.map((label) => (
+                      <Label key={label.id}>{label.name}</Label>
+                    ))}
+
+                    {/* Date */}
                     <Text
                       sx={{
                         color: "fg.muted",
                         fontSize: 0,
                       }}
                     >
-                      💬 {issue.comments}
+                      opened {formatDate(issue.createdAt)}
                     </Text>
-                  )}
-                </div>
-              </div>
 
-              {/* Author */}
-              {issue.author && (
-                <div
-                  style={{
-                    flexShrink: 0,
-                  }}
-                >
-                  <Avatar
-                    src={issue.author.avatarUrl}
-                    alt={issue.author.login}
-                    size={32}
-                  />
+                    {/* Comments */}
+                    {issue.comments > 0 && (
+                      <Text
+                        sx={{
+                          color: "fg.muted",
+                          fontSize: 0,
+                        }}
+                      >
+                        💬 {issue.comments}
+                      </Text>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))
+
+                {/* Author */}
+                {issue.author && (
+                  <div
+                    style={{
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Avatar
+                      src={issue.author.avatarUrl}
+                      alt={issue.author.login}
+                      size={28}
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          })
         )}
       </div>
 
@@ -380,6 +619,165 @@ export default function IssuesPage() {
             Next
           </Button>
         </div>
+      )}
+
+      {/* Dialog: Add to Board */}
+      {isAddToBoardOpen && (
+        <Dialog
+          title="Add Issues to Board"
+          onClose={() => {
+            if (!addingToBoard) setIsAddToBoardOpen(false);
+          }}
+          width="medium"
+        >
+          {loadingBoards ? (
+            <div
+              style={{
+                padding: "32px",
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                gap: "10px",
+              }}
+            >
+              <Spinner size="small" />
+              <Text style={{ color: "var(--fgColor-muted)" }}>
+                Loading project boards...
+              </Text>
+            </div>
+          ) : boards.length === 0 ? (
+            <div style={{ padding: "20px" }}>
+              <Flash variant="warning" style={{ marginBottom: "16px" }}>
+                No boards found in this project. Please create a board first in
+                the <strong>Board</strong> tab.
+              </Flash>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                }}
+              >
+                <Button onClick={() => setIsAddToBoardOpen(false)}>
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <form onSubmit={handleSubmitAddToBoard}>
+              <div
+                style={{
+                  padding: "16px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "16px",
+                }}
+              >
+                {addToBoardError && (
+                  <Flash variant="danger">{addToBoardError}</Flash>
+                )}
+
+                <Text as="p" style={{ margin: 0, fontSize: "14px" }}>
+                  Adding <strong>{selectedIssues.length}</strong> selected
+                  issue(s) to a board column.
+                </Text>
+
+                {/* Board Selector */}
+                <div>
+                  <Text
+                    as="label"
+                    htmlFor="select-board"
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "14px",
+                      display: "block",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Select Board
+                  </Text>
+                  <Select
+                    id="select-board"
+                    block
+                    value={targetBoardId}
+                    onChange={(e) => handleBoardChange(e.target.value)}
+                  >
+                    {boards.map((b) => (
+                      <Select.Option key={b.id} value={b.id}>
+                        {b.name}
+                      </Select.Option>
+                    ))}
+                  </Select>
+                </div>
+
+                {/* Section / Column Selector */}
+                <div>
+                  <Text
+                    as="label"
+                    htmlFor="select-section"
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "14px",
+                      display: "block",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    Select Section / Column
+                  </Text>
+                  {targetSections.length === 0 ? (
+                    <Text
+                      style={{
+                        color: "var(--fgColor-muted)",
+                        fontSize: "13px",
+                      }}
+                    >
+                      This board has no sections.
+                    </Text>
+                  ) : (
+                    <Select
+                      id="select-section"
+                      block
+                      value={targetSectionId}
+                      onChange={(e) => setTargetSectionId(e.target.value)}
+                    >
+                      {targetSections.map((s) => (
+                        <Select.Option key={s.id} value={s.id}>
+                          {s.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  )}
+                </div>
+              </div>
+
+              {/* Dialog Footer Actions */}
+              <div
+                style={{
+                  padding: "12px 16px",
+                  borderTop: "1px solid var(--borderColor-default)",
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  gap: "8px",
+                }}
+              >
+                <Button
+                  type="button"
+                  onClick={() => setIsAddToBoardOpen(false)}
+                  disabled={addingToBoard}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  variant="primary"
+                  loading={addingToBoard}
+                  disabled={!targetSectionId || addingToBoard}
+                >
+                  Add to Board
+                </Button>
+              </div>
+            </form>
+          )}
+        </Dialog>
       )}
     </div>
   );

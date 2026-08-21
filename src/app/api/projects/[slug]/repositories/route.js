@@ -29,7 +29,10 @@ export async function POST(request, { params }) {
     });
 
     if (!membership) {
-      return NextResponse.json({ message: "Project not found" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Project not found" },
+        { status: 404 },
+      );
     }
 
     if (membership.role === "MEMBER") {

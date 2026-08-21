@@ -14,14 +14,14 @@ export async function POST(request) {
     if (!username || username.trim().length < 3) {
       return NextResponse.json(
         { message: "Username must be at least 3 characters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (!password || password.length < 8) {
       return NextResponse.json(
         { message: "Password must be at least 8 characters" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -57,7 +57,7 @@ export async function POST(request) {
           githubAuthorized: user.githubAuthorized,
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
 
     // Set HTTP-only session cookie
@@ -73,7 +73,7 @@ export async function POST(request) {
     console.error("Signup error:", error);
     return NextResponse.json(
       { message: error.message || "Failed to create account" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

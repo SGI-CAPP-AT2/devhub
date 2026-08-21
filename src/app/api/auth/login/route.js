@@ -14,7 +14,7 @@ export async function POST(request) {
     if (!username || !password) {
       return NextResponse.json(
         { message: "Username and password are required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -23,17 +23,14 @@ export async function POST(request) {
     // Query user by username or email
     const user = await db.user.findFirst({
       where: {
-        OR: [
-          { username: trimmedUsername },
-          { email: trimmedUsername },
-        ],
+        OR: [{ username: trimmedUsername }, { email: trimmedUsername }],
       },
     });
 
     if (!user || !user.passwordHash) {
       return NextResponse.json(
         { message: "Invalid username or password" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -42,7 +39,7 @@ export async function POST(request) {
     if (inputHash !== user.passwordHash) {
       return NextResponse.json(
         { message: "Invalid username or password" },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -61,7 +58,7 @@ export async function POST(request) {
           githubAuthorized: user.githubAuthorized,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
 
     response.cookies.set("devhub_session", sessionData, {
@@ -74,9 +71,6 @@ export async function POST(request) {
     return response;
   } catch (error) {
     console.error("Login error:", error);
-    return NextResponse.json(
-      { message: "Failed to sign in" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Failed to sign in" }, { status: 500 });
   }
 }

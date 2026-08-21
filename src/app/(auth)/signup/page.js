@@ -19,7 +19,13 @@ export default function SignupPage() {
           >
             Join DevHub
           </h1>
-          <p style={{ color: "var(--fgColor-muted)", fontSize: "14px", margin: 0 }}>
+          <p
+            style={{
+              color: "var(--fgColor-muted)",
+              fontSize: "14px",
+              margin: 0,
+            }}
+          >
             Create your account and start collaborating
           </p>
         </div>

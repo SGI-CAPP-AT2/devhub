@@ -19,7 +19,6 @@ import styles from "./SideBar.module.css";
 const NAV_ITEMS = [
   { label: "Dashboard", href: "/", icon: HomeIcon },
   { label: "Projects", href: "/projects", icon: ProjectIcon },
-  { label: "Issues", href: "/issues", icon: IssueOpenedIcon },
   { label: "GitHub", href: "/github", icon: MarkGithubIcon },
   { label: "Members", href: "/members", icon: PeopleIcon },
   { label: "Settings", href: "/settings", icon: GearIcon },

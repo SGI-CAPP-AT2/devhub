@@ -19,7 +19,13 @@ export default function LoginPage() {
           >
             Sign in to DevHub
           </h1>
-          <p style={{ color: "var(--fgColor-muted)", fontSize: "14px", margin: 0 }}>
+          <p
+            style={{
+              color: "var(--fgColor-muted)",
+              fontSize: "14px",
+              margin: 0,
+            }}
+          >
             Enter your credentials or use GitHub to continue
           </p>
         </div>

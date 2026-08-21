@@ -16,7 +16,9 @@ export function LoginForm() {
       const params = new URLSearchParams(window.location.search);
       const errParam = params.get("error");
       if (errParam === "no_account_linked") {
-        setError("No DevHub account is linked to this GitHub account. Please sign up or log in with credentials.");
+        setError(
+          "No DevHub account is linked to this GitHub account. Please sign up or log in with credentials.",
+        );
       } else if (errParam === "auth_failed" || errParam === "token_failed") {
         setError("GitHub authorization failed. Please try again.");
       }
@@ -61,7 +63,10 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+    <form
+      onSubmit={handleSubmit}
+      style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+    >
       {/* Username / Email Field */}
       <FormControl>
         <FormControl.Label>Username or Email</FormControl.Label>
@@ -131,9 +136,23 @@ export function LoginForm() {
           fontSize: "12px",
         }}
       >
-        <div style={{ flex: 1, height: "1px", backgroundColor: "var(--borderColor-default)" }} />
-        <span style={{ padding: "0 12px", textTransform: "uppercase" }}>OR</span>
-        <div style={{ flex: 1, height: "1px", backgroundColor: "var(--borderColor-default)" }} />
+        <div
+          style={{
+            flex: 1,
+            height: "1px",
+            backgroundColor: "var(--borderColor-default)",
+          }}
+        />
+        <span style={{ padding: "0 12px", textTransform: "uppercase" }}>
+          OR
+        </span>
+        <div
+          style={{
+            flex: 1,
+            height: "1px",
+            backgroundColor: "var(--borderColor-default)",
+          }}
+        />
       </div>
 
       {/* GitHub Sign In Button */}

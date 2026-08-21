@@ -28,7 +28,7 @@ export async function GET(request) {
           client_secret: clientSecret,
           code,
         }),
-      }
+      },
     );
 
     const tokenData = await tokenRes.json();
@@ -37,7 +37,7 @@ export async function GET(request) {
     if (!accessToken) {
       console.error("GitHub Token Exchange Failed:", tokenData);
       return NextResponse.redirect(
-        new URL("/login?error=token_failed", request.url)
+        new URL("/login?error=token_failed", request.url),
       );
     }
 
@@ -72,10 +72,7 @@ export async function GET(request) {
     // Look for existing user linked by githubId or email
     let user = await db.user.findFirst({
       where: {
-        OR: [
-          { githubId: ghUserId },
-          ...(ghEmail ? [{ email: ghEmail }] : []),
-        ],
+        OR: [{ githubId: ghUserId }, ...(ghEmail ? [{ email: ghEmail }] : [])],
       },
     });
 
@@ -126,7 +123,7 @@ export async function GET(request) {
       // 4. User clicked "Sign in with GitHub" BUT no account exists linked to this GitHub -> Redirect to login with error!
       console.warn(`No account found linked to GitHub user ID ${ghUserId}`);
       const response = NextResponse.redirect(
-        new URL("/login?error=no_account_linked", request.url)
+        new URL("/login?error=no_account_linked", request.url),
       );
       response.cookies.delete("devhub_draft_username");
       return response;
@@ -153,7 +150,7 @@ export async function GET(request) {
   } catch (error) {
     console.error("GitHub OAuth Callback Error:", error);
     return NextResponse.redirect(
-      new URL("/login?error=auth_failed", request.url)
+      new URL("/login?error=auth_failed", request.url),
     );
   }
 }

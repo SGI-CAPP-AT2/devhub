@@ -1,7 +1,8 @@
 "use client";
 
-import { RepoIcon } from "@primer/octicons-react";
-import { Flash, Heading, Label, Spinner, Text } from "@primer/react";
+import AddProjectRepositoriesDialog from "@/components/projects/AddProjectRepositoriesDialog";
+import { PlusIcon, RepoIcon } from "@primer/octicons-react";
+import { Button, Flash, Heading, Label, Spinner, Text } from "@primer/react";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
@@ -11,6 +12,7 @@ export default function ProjectRepositoriesPage() {
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isAddRepoDialogOpen, setIsAddRepoDialogOpen] = useState(false);
 
   useEffect(() => {
     async function loadProject() {
@@ -50,7 +52,7 @@ export default function ProjectRepositoriesPage() {
 
   if (error) return <Flash variant="danger">{error}</Flash>;
 
-  const repositories = project.repositories || [];
+  const repositories = project?.repositories || [];
 
   return (
     <section aria-labelledby="repositories-heading">
@@ -58,24 +60,77 @@ export default function ProjectRepositoriesPage() {
         style={{
           display: "flex",
           alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
           gap: "10px",
           marginBottom: "20px",
         }}
       >
-        <Heading
-          as="h2"
-          id="repositories-heading"
-          style={{ fontSize: "20px", margin: 0 }}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          <Heading
+            as="h2"
+            id="repositories-heading"
+            style={{ fontSize: "20px", margin: 0 }}
+          >
+            Repositories
+          </Heading>
+          <Label style={{ borderRadius: "20px" }}>{repositories.length}</Label>
+        </div>
+
+        <Button
+          variant="primary"
+          size="small"
+          leadingVisual={PlusIcon}
+          onClick={() => setIsAddRepoDialogOpen(true)}
         >
-          Repositories
-        </Heading>
-        <Label style={{ borderRadius: "20px" }}>{repositories.length}</Label>
+          Add repositories
+        </Button>
       </div>
 
       {repositories.length === 0 ? (
-        <Flash variant="default">
-          No repositories have been added to this project yet.
-        </Flash>
+        <div
+          style={{
+            padding: "48px 16px",
+            textAlign: "center",
+            border: "1px dashed var(--borderColor-default)",
+            borderRadius: "8px",
+            backgroundColor: "var(--bgColor-muted)",
+          }}
+        >
+          <RepoIcon
+            size={36}
+            style={{ color: "var(--fgColor-muted)", marginBottom: "12px" }}
+          />
+          <Text
+            as="h3"
+            style={{
+              fontSize: "16px",
+              fontWeight: 600,
+              margin: 0,
+              marginBottom: "6px",
+            }}
+          >
+            No repositories added yet
+          </Text>
+          <Text
+            as="p"
+            style={{
+              color: "var(--fgColor-muted)",
+              fontSize: "14px",
+              marginBottom: "16px",
+            }}
+          >
+            Connect GitHub repositories to track issues and pull requests in
+            this project.
+          </Text>
+          <Button
+            variant="primary"
+            leadingVisual={PlusIcon}
+            onClick={() => setIsAddRepoDialogOpen(true)}
+          >
+            Add repositories
+          </Button>
+        </div>
       ) : (
         <div
           style={{
@@ -134,6 +189,20 @@ export default function ProjectRepositoriesPage() {
           ))}
         </div>
       )}
+
+      {/* Add Repositories Dialog */}
+      <AddProjectRepositoriesDialog
+        isOpen={isAddRepoDialogOpen}
+        slug={slug}
+        existingRepositoryFullNames={repositories.map((r) => r.fullName)}
+        onDismiss={() => setIsAddRepoDialogOpen(false)}
+        onAdded={(updatedRepos) => {
+          setProject((prev) => ({
+            ...prev,
+            repositories: updatedRepos,
+          }));
+        }}
+      />
     </section>
   );
 }

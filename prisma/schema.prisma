@@ -24,6 +24,7 @@ model User {
   sessions         Session[]
 
   projectMemberships ProjectMember[]
+  createdIssues    Issue[]
 
   createdAt        DateTime        @default(now())
   updatedAt        DateTime        @updatedAt
@@ -90,6 +91,7 @@ model Project {
   members      ProjectMember[]
   repositories GitHubRepository[]
   boards       Board[]
+  issues       Issue[]
 
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -148,22 +150,68 @@ model GitHubRepository {
 }
 
 model Board {
-  id              String   @id @default(cuid())
+  id        String   @id @default(cuid())
 
-  projectId       String
-  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
-  name            String
+  name      String
 
-  // GitHub Projects V2 node ID
-  githubProjectId String?
+  sections  BoardSection[]
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([projectId])
 
   @@map("boards")
+}
+
+model BoardSection {
+  id        String   @id @default(cuid())
+
+  boardId   String
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  name      String
+  position  Int
+
+  issues    Issue[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boardId])
+  @@index([boardId, position])
+
+  @@map("board_sections")
+}
+
+model Issue {
+  id          String   @id @default(cuid())
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  sectionId   String
+  section     BoardSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?  @db.Text
+
+  position    Int
+
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([projectId])
+  @@index([sectionId])
+  @@index([sectionId, position])
+
+  @@map("issues")
 }
 
 enum Role {

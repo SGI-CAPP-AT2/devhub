@@ -296,3 +296,152 @@ export async function GET(request, { params }) {
     );
   }
 }
+
+export async function POST(request, { params }) {
+  try {
+    const { slug } = await params;
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("devhub_session");
+
+    if (!sessionCookie?.value) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    let session;
+    try {
+      session = JSON.parse(sessionCookie.value);
+    } catch {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!session.userId) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    // Find project
+    const project = await db.project.findUnique({
+      where: {
+        slug,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!project) {
+      return NextResponse.json(
+        { message: "Project not found" },
+        { status: 404 },
+      );
+    }
+
+    // Check project membership
+    const membership = await db.projectMember.findUnique({
+      where: {
+        userId_projectId: {
+          userId: session.userId,
+          projectId: project.id,
+        },
+      },
+    });
+
+    if (!membership) {
+      return NextResponse.json(
+        { message: "You are not a member of this project" },
+        { status: 403 },
+      );
+    }
+
+    const body = await request.json();
+    const { sectionId, issues = [] } = body;
+
+    if (!sectionId || typeof sectionId !== "string") {
+      return NextResponse.json(
+        { message: "Target section is required" },
+        { status: 400 },
+      );
+    }
+
+    // Verify section belongs to a board in this project
+    const section = await db.boardSection.findFirst({
+      where: {
+        id: sectionId,
+        board: {
+          projectId: project.id,
+        },
+      },
+      include: {
+        board: true,
+      },
+    });
+
+    if (!section) {
+      return NextResponse.json(
+        { message: "Section not found in this project" },
+        { status: 404 },
+      );
+    }
+
+    const rawIssuesList = Array.isArray(issues) ? issues : [issues];
+    const validIssues = rawIssuesList
+      .filter((i) => i && typeof i.title === "string" && i.title.trim())
+      .map((i) => ({
+        title: i.title.trim(),
+        description:
+          typeof i.description === "string" && i.description.trim()
+            ? i.description.trim()
+            : null,
+      }));
+
+    if (validIssues.length === 0) {
+      return NextResponse.json(
+        { message: "No valid issues provided to add" },
+        { status: 400 },
+      );
+    }
+
+    // Determine starting position in section
+    const lastIssue = await db.issue.findFirst({
+      where: {
+        sectionId,
+      },
+      orderBy: {
+        position: "desc",
+      },
+      select: {
+        position: true,
+      },
+    });
+
+    const nextPosition = lastIssue ? lastIssue.position + 1 : 0;
+
+    const createdIssues = await db.$transaction(
+      validIssues.map((item, idx) =>
+        db.issue.create({
+          data: {
+            projectId: project.id,
+            sectionId,
+            title: item.title,
+            description: item.description,
+            position: nextPosition + idx,
+            createdById: session.userId,
+          },
+        }),
+      ),
+    );
+
+    return NextResponse.json(
+      {
+        message: `Added ${createdIssues.length} issue(s) to board`,
+        issues: createdIssues,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    console.error("Add issues to board error:", error);
+    return NextResponse.json(
+      { message: "Failed to add issues to board" },
+      { status: 500 },
+    );
+  }
+}

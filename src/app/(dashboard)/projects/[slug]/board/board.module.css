@@ -1,0 +1,231 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 140px);
+  min-height: 500px;
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--borderColor-muted);
+}
+
+.boardSelectorWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.boardTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--fgColor-default);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.boardCanvas {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex: 1;
+  padding-bottom: 16px;
+  align-items: flex-start;
+}
+
+.boardCanvas::-webkit-scrollbar {
+  height: 8px;
+}
+
+.boardCanvas::-webkit-scrollbar-track {
+  background: var(--bgColor-muted);
+  border-radius: 4px;
+}
+
+.boardCanvas::-webkit-scrollbar-thumb {
+  background: var(--borderColor-default);
+  border-radius: 4px;
+}
+
+.boardCanvas::-webkit-scrollbar-thumb:hover {
+  background: var(--fgColor-muted);
+}
+
+.column {
+  width: 320px;
+  min-width: 320px;
+  max-width: 320px;
+  background-color: var(--bgColor-inset, #f6f8fa);
+  border: 1px solid var(--borderColor-default);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.columnHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--borderColor-muted);
+  background-color: var(--bgColor-default);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.columnTitleArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.columnTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fgColor-default);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.columnActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 8px;
+}
+
+.columnBody {
+  padding: 12px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+  transition:
+    background-color 0.2s ease,
+    outline 0.2s ease;
+}
+
+.columnBodyDropTarget {
+  background-color: var(--bgColor-accent-muted, #ddf4ff) !important;
+  outline: 2px dashed var(--fgColor-accent, #0969da);
+  outline-offset: -2px;
+  border-radius: 6px;
+}
+
+.emptyColumn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 12px;
+  color: var(--fgColor-muted);
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed var(--borderColor-default);
+  border-radius: 6px;
+  background: var(--bgColor-default);
+  pointer-events: none;
+}
+
+.issueCard {
+  background: var(--bgColor-default);
+  border: 1px solid var(--borderColor-default);
+  border-radius: 6px;
+  padding: 12px;
+  cursor: grab;
+  user-select: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    opacity 0.15s ease,
+    transform 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.issueCard:active {
+  cursor: grabbing;
+}
+
+.issueCardDragging {
+  opacity: 0.45;
+  transform: scale(0.98);
+  border: 1px dashed var(--fgColor-accent);
+}
+
+.issueCard:hover {
+  border-color: var(--fgColor-accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+.issueHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.issueTitle {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fgColor-default);
+  line-height: 1.3;
+}
+
+.issueMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--fgColor-muted);
+}
+
+.addSectionColumn {
+  width: 280px;
+  min-width: 280px;
+  background-color: var(--bgColor-muted, #f6f8fa);
+  border: 1px dashed var(--borderColor-default);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.addSectionButton {
+  width: 100%;
+  padding: 10px 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--fgColor-muted);
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.addSectionButton:hover {
+  background-color: var(--bgColor-default);
+  color: var(--fgColor-accent);
+  border: 1px solid var(--borderColor-default);
+}
