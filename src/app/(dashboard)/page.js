@@ -14,15 +14,18 @@ import {
 } from "@primer/octicons-react";
 import {
   Button,
+  Dialog,
   Flash,
   Heading,
   Label,
+  Select,
   Spinner,
   Text,
   TextInput,
 } from "@primer/react";
-import { useEffect, useState } from "react";
 import CreateProjectDialog from "@/components/projects/CreateProjectDialog";
+import ProjectCard from "@/components/projects/ProjectCard";
+import { useEffect, useState } from "react";
 
 export default function Home() {
   const [user, setUser] = useState(null);
@@ -30,10 +33,16 @@ export default function Home() {
   const [repos, setRepos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [addedRepos, setAddedRepos] = useState({});
 
   // New Project Modal State
   const [showCreateModal, setShowCreateModal] = useState(false);
+
+  // Add to Project dialog state
+  const [addToProjectRepo, setAddToProjectRepo] = useState(null); // the github repo object
+  const [eligibleProjects, setEligibleProjects] = useState([]); // projects that don't already have this repo
+  const [selectedProjectSlug, setSelectedProjectSlug] = useState("");
+  const [addingToProject, setAddingToProject] = useState(false);
+  const [addToProjectError, setAddToProjectError] = useState("");
 
   useEffect(() => {
     async function loadDashboardData() {
@@ -75,19 +84,84 @@ export default function Home() {
     loadDashboardData();
   }, []);
 
-  const handleAddToProject = (repoId) => {
-    // Dummy action per user request: toggle added status for UI demonstration
-    setAddedRepos((prev) => ({
-      ...prev,
-      [repoId]: !prev[repoId],
-    }));
+  const handleOpenAddToProject = (repo) => {
+    // Filter out projects that already contain this repo
+    const repoFullName = repo.full_name?.toLowerCase();
+    const available = projects.filter(
+      (p) =>
+        !p.repositories?.some(
+          (r) => r.fullName?.toLowerCase() === repoFullName,
+        ),
+    );
+    setAddToProjectRepo(repo);
+    setEligibleProjects(available);
+    setAddToProjectError("");
+    setSelectedProjectSlug(available.length > 0 ? available[0].slug : "");
   };
 
-  const filteredRepos = repos.filter(
+  const handleSubmitAddToProject = async (e) => {
+    e.preventDefault();
+    if (!selectedProjectSlug || !addToProjectRepo) return;
+
+    setAddingToProject(true);
+    setAddToProjectError("");
+
+    try {
+      const response = await fetch(
+        `/api/projects/${encodeURIComponent(selectedProjectSlug)}/repositories`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ repositories: [addToProjectRepo] }),
+        },
+      );
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to add repository to project.");
+      }
+
+      // Update local project repositories so re-opening the dialog reflects the change
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.slug === selectedProjectSlug
+            ? {
+                ...p,
+                repositories: [
+                  ...(p.repositories || []),
+                  {
+                    id: String(addToProjectRepo.id),
+                    name: addToProjectRepo.name,
+                    fullName: addToProjectRepo.full_name,
+                    description: addToProjectRepo.description || null,
+                    url: addToProjectRepo.html_url,
+                    defaultBranch: addToProjectRepo.default_branch || "main",
+                    isPrivate: Boolean(addToProjectRepo.private),
+                  },
+                ],
+                repoCount: (p.repoCount ?? 0) + 1,
+              }
+            : p,
+        ),
+      );
+      setAddToProjectRepo(null);
+    } catch (err) {
+      setAddToProjectError(err.message || "Failed to add repository.");
+    } finally {
+      setAddingToProject(false);
+    }
+  };
+
+  const trimmedQuery = searchQuery.trim().toLowerCase();
+  const matchingRepos = repos.filter(
     (repo) =>
-      repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      repo.description?.toLowerCase().includes(searchQuery.toLowerCase()),
+      repo.name.toLowerCase().includes(trimmedQuery) ||
+      repo.description?.toLowerCase().includes(trimmedQuery),
   );
+
+  const displayedRepos = trimmedQuery
+    ? matchingRepos
+    : matchingRepos.slice(0, 6);
 
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "24px 16px" }}>
@@ -207,119 +281,12 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
               gap: "16px",
             }}
           >
             {projects.map((project) => (
-              <div
-                key={project.id}
-                style={{
-                  padding: "20px",
-                  borderRadius: "8px",
-                  border: "1px solid var(--borderColor-default)",
-                  backgroundColor: "var(--bgColor-default)",
-                  display: "flex",
-                  flexDirection: "column",
-                  justifyContent: "space-between",
-                  transition: "all 0.2s ease-in-out",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "12px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      <ProjectIcon
-                        size={18}
-                        style={{ color: "var(--fgColor-accent)" }}
-                      />
-                      <Text style={{ fontWeight: "bold", fontSize: "16px" }}>
-                        {project.name}
-                      </Text>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "6px" }}>
-                      <Label
-                        size="small"
-                        variant={
-                          project.userRole === "OWNER"
-                            ? "accent"
-                            : project.userRole === "ADMIN"
-                              ? "attention"
-                              : "secondary"
-                        }
-                      >
-                        {project.userRole}
-                      </Label>
-                    </div>
-                  </div>
-
-                  <Text
-                    as="p"
-                    style={{
-                      color: "var(--fgColor-muted)",
-                      fontSize: "14px",
-                      marginBottom: "16px",
-                      minHeight: "38px",
-                      lineHeight: 1.4,
-                    }}
-                  >
-                    {project.description || "No project description."}
-                  </Text>
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    paddingTop: "12px",
-                    borderTop: "1px solid var(--borderColor-default)",
-                    fontSize: "12px",
-                    color: "var(--fgColor-muted)",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <PeopleIcon size={14} />
-                    <span>
-                      {project.memberCount} member
-                      {project.memberCount !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <RepoIcon size={14} />
-                    <span>
-                      {project.repoCount} repo
-                      {project.repoCount !== 1 ? "s" : ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
+              <ProjectCard key={project.id} project={project} />
             ))}
           </div>
         )}
@@ -341,7 +308,13 @@ export default function Home() {
             <Heading as="h2" style={{ fontSize: "20px", margin: 0 }}>
               Your GitHub Repositories
             </Heading>
-            <Label style={{ borderRadius: "20px" }}>{repos.length}</Label>
+            <Label style={{ borderRadius: "20px" }}>
+              {trimmedQuery
+                ? `${matchingRepos.length} results`
+                : repos.length > 6
+                  ? `6 of ${repos.length}`
+                  : repos.length}
+            </Label>
           </div>
 
           <div style={{ width: "280px" }}>
@@ -369,7 +342,7 @@ export default function Home() {
               Loading repositories...
             </Text>
           </div>
-        ) : filteredRepos.length === 0 ? (
+        ) : displayedRepos.length === 0 ? (
           <Flash
             variant="default"
             style={{ textAlign: "center", padding: "32px" }}
@@ -377,187 +350,206 @@ export default function Home() {
             <Text>No repositories found matching "{searchQuery}".</Text>
           </Flash>
         ) : (
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {filteredRepos.map((repo) => {
-              const isAdded = Boolean(addedRepos[repo.id]);
-              return (
-                <div
-                  key={repo.id}
-                  style={{
-                    padding: "20px",
-                    borderRadius: "8px",
-                    border: `1px solid ${
-                      isAdded
-                        ? "var(--borderColor-accent-emphasis, #1f6beb)"
-                        : "var(--borderColor-default, #30363d)"
-                    }`,
-                    backgroundColor: "var(--bgColor-inset, #0d1117)",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    transition: "all 0.2s ease-in-out",
-                  }}
-                >
-                  <div>
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(420px, 1fr))",
+                gap: "16px",
+              }}
+            >
+              {displayedRepos.map((repo) => {
+                return (
+                  <div
+                    key={repo.id}
+                    style={{
+                      padding: "20px",
+                      borderRadius: "8px",
+                      border: "1px solid var(--borderColor-default, #30363d)",
+                      backgroundColor: "var(--bgColor-inset, #0d1117)",
+                      display: "flex",
+                      flexDirection: "column",
+                      justifyContent: "space-between",
+                      transition: "all 0.2s ease-in-out",
+                    }}
+                  >
+                    <div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          marginBottom: "12px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            overflow: "hidden",
+                          }}
+                        >
+                          <RepoIcon
+                            size={18}
+                            style={{
+                              color: "var(--fgColor-muted)",
+                              flexShrink: 0,
+                            }}
+                          />
+                          <Text
+                            as="a"
+                            href={repo.html_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              fontWeight: "bold",
+                              color: "var(--fgColor-accent, #58a6ff)",
+                              textDecoration: "none",
+                              fontSize: "16px",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {repo.name}
+                          </Text>
+                        </div>
+
+                        <Label
+                          size="small"
+                          variant={repo.private ? "attention" : "secondary"}
+                          style={{ flexShrink: 0 }}
+                        >
+                          {repo.private ? (
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
+                            >
+                              <LockIcon size={12} /> Private
+                            </span>
+                          ) : (
+                            "Public"
+                          )}
+                        </Label>
+                      </div>
+
+                      <Text
+                        as="p"
+                        style={{
+                          color: "var(--fgColor-muted)",
+                          fontSize: "14px",
+                          marginBottom: "16px",
+                          lineHeight: 1.4,
+                          minHeight: "40px",
+                        }}
+                      >
+                        {repo.description || "No description provided."}
+                      </Text>
+                    </div>
+
                     <div
                       style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        marginBottom: "12px",
+                        paddingTop: "12px",
+                        borderTop: "1px solid var(--borderColor-default)",
                       }}
                     >
                       <div
                         style={{
                           display: "flex",
                           alignItems: "center",
-                          gap: "8px",
-                          overflow: "hidden",
+                          gap: "16px",
+                          fontSize: "12px",
+                          color: "var(--fgColor-muted)",
                         }}
                       >
-                        <RepoIcon
-                          size={18}
-                          style={{
-                            color: "var(--fgColor-muted)",
-                            flexShrink: 0,
-                          }}
-                        />
-                        <Text
-                          as="a"
-                          href={repo.html_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontWeight: "bold",
-                            color: "var(--fgColor-accent, #58a6ff)",
-                            textDecoration: "none",
-                            fontSize: "16px",
-                            whiteSpace: "nowrap",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                          }}
-                        >
-                          {repo.name}
-                        </Text>
-                      </div>
-
-                      <Label
-                        size="small"
-                        variant={repo.private ? "attention" : "secondary"}
-                        style={{ flexShrink: 0 }}
-                      >
-                        {repo.private ? (
-                          <span
+                        {repo.language && (
+                          <div
                             style={{
-                              display: "inline-flex",
+                              display: "flex",
                               alignItems: "center",
-                              gap: "4px",
+                              gap: "6px",
                             }}
                           >
-                            <LockIcon size={12} /> Private
-                          </span>
-                        ) : (
-                          "Public"
+                            <span
+                              style={{
+                                width: "10px",
+                                height: "10px",
+                                borderRadius: "50%",
+                                backgroundColor: getLanguageColor(
+                                  repo.language,
+                                ),
+                                display: "inline-block",
+                              }}
+                            />
+                            <span>{repo.language}</span>
+                          </div>
                         )}
-                      </Label>
-                    </div>
 
-                    <Text
-                      as="p"
-                      style={{
-                        color: "var(--fgColor-muted)",
-                        fontSize: "14px",
-                        marginBottom: "20px",
-                        minHeight: "40px",
-                        lineHeight: 1.4,
-                      }}
-                    >
-                      {repo.description || "No description provided."}
-                    </Text>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      paddingTop: "12px",
-                      borderTop: "1px solid var(--borderColor-default)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "16px",
-                        fontSize: "12px",
-                        color: "var(--fgColor-muted)",
-                      }}
-                    >
-                      {repo.language && (
                         <div
                           style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: "6px",
+                            gap: "4px",
                           }}
                         >
-                          <span
-                            style={{
-                              width: "10px",
-                              height: "10px",
-                              borderRadius: "50%",
-                              backgroundColor: getLanguageColor(repo.language),
-                              display: "inline-block",
-                            }}
-                          />
-                          <span>{repo.language}</span>
+                          <StarIcon size={14} />
+                          <span>{repo.stargazers_count}</span>
                         </div>
-                      )}
 
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        <StarIcon size={14} />
-                        <span>{repo.stargazers_count}</span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          <RepoForkedIcon size={14} />
+                          <span>{repo.forks_count}</span>
+                        </div>
                       </div>
 
-                      <div
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
+                      {/* Add to Project Button */}
+                      <Button
+                        size="small"
+                        variant="primary"
+                        leadingVisual={PlusIcon}
+                        onClick={() => handleOpenAddToProject(repo)}
                       >
-                        <RepoForkedIcon size={14} />
-                        <span>{repo.forks_count}</span>
-                      </div>
+                        Add to Project
+                      </Button>
                     </div>
-
-                    {/* Dummy Add to Project Button */}
-                    <Button
-                      size="small"
-                      variant={isAdded ? "outline" : "primary"}
-                      leadingVisual={isAdded ? CheckIcon : PlusIcon}
-                      onClick={() => handleAddToProject(repo.id)}
-                    >
-                      {isAdded ? "Added" : "Add to Project"}
-                    </Button>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            {!trimmedQuery && repos.length > 6 && (
+              <div
+                style={{
+                  marginTop: "16px",
+                  textAlign: "center",
+                  padding: "8px",
+                }}
+              >
+                <Text
+                  style={{
+                    color: "var(--fgColor-muted)",
+                    fontSize: "13px",
+                  }}
+                >
+                  Showing 6 of {repos.length} repositories. Search to find other
+                  repositories.
+                </Text>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -569,6 +561,107 @@ export default function Home() {
             setProjects((currentProjects) => [project, ...currentProjects])
           }
         />
+      )}
+
+      {/* Add to Project Dialog */}
+      {addToProjectRepo && (
+        <Dialog
+          title={`Add "${addToProjectRepo.name}" to a project`}
+          onClose={() => {
+            if (!addingToProject) setAddToProjectRepo(null);
+          }}
+          width="medium"
+        >
+          <form onSubmit={handleSubmitAddToProject}>
+            <div
+              style={{
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
+            >
+              {addToProjectError && (
+                <Flash variant="danger">{addToProjectError}</Flash>
+              )}
+
+              {projects.length === 0 ? (
+                <Flash variant="warning">
+                  You have no projects yet. Create a project first.
+                </Flash>
+              ) : eligibleProjects.length === 0 ? (
+                <Flash variant="default">
+                  <strong>{addToProjectRepo.full_name}</strong> has already been
+                  added to all your projects.
+                </Flash>
+              ) : (
+                <>
+                  <Text as="p" style={{ margin: 0, fontSize: "14px" }}>
+                    Select which project to add{" "}
+                    <strong>{addToProjectRepo.full_name}</strong> to.
+                  </Text>
+
+                  <div>
+                    <Text
+                      as="label"
+                      htmlFor="select-project"
+                      style={{
+                        fontWeight: "bold",
+                        fontSize: "14px",
+                        display: "block",
+                        marginBottom: "6px",
+                      }}
+                    >
+                      Select Project
+                    </Text>
+                    <Select
+                      id="select-project"
+                      block
+                      value={selectedProjectSlug}
+                      onChange={(e) => setSelectedProjectSlug(e.target.value)}
+                    >
+                      {eligibleProjects.map((p) => (
+                        <Select.Option key={p.id} value={p.slug}>
+                          {p.name}
+                        </Select.Option>
+                      ))}
+                    </Select>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div
+              style={{
+                padding: "12px 16px",
+                borderTop: "1px solid var(--borderColor-default)",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "8px",
+              }}
+            >
+              <Button
+                type="button"
+                onClick={() => setAddToProjectRepo(null)}
+                disabled={addingToProject}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                loading={addingToProject}
+                disabled={
+                  eligibleProjects.length === 0 ||
+                  !selectedProjectSlug ||
+                  addingToProject
+                }
+              >
+                Add to Project
+              </Button>
+            </div>
+          </form>
+        </Dialog>
       )}
     </div>
   );
